@@ -1,0 +1,206 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<meta charset="utf-8">
+<style>
+    body {
+        margin: 0;
+        background: #f5f5f5;
+        min-width: 960px;
+    }
+
+    svg {
+        background: black;
+        cursor: crosshair;
+    }
+
+    rect {
+        fill: none;
+        pointer-events: all;
+    }
+
+    circle {
+        fill: none;
+        stroke-width: 2.5px;
+    }
+
+    .btn-reset {
+        margin-top: 15px;
+    }
+
+</style>
+<body>
+
+<div class="container-fluid">
+    <div class="row-fluid">
+        <div class="span6">
+            <h2>Star Fire</h2>
+            <h5>Shoot the stars before they disappear!</h5>
+        </div>
+        <div class= "span5">
+            <h4>Score: <span data-bind="text: score"></span></h4>
+            <h4>Spawn Speed (ms): <input data-bind="value: spawnSpeed"/></h4>
+            <h4>Growth Rate (ms): <input data-bind="value: growthRate"/></h4>
+            <h4>Star Radius: <input data-bind="value: starRadius"/></h4>
+        </div>
+        <div class="span1">
+            <div class="btn btn-small btn-primary btn-reset" data-bind="click: resetScore">Reset Score</div>
+            <div class="btn btn-small btn-primary btn-reset" data-bind="click: resetParameters">Reset Parameters to Default</div>
+    </div>
+</div>
+
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="knockout-2.3.0.js"></script>
+<link rel='stylesheet' type="text/css" href="bootstrap.css"/>
+
+<script>
+
+    function Stats() {
+        var self = this;
+        var spawnCircle;
+        var speed = 500,
+                rate = 5000,
+                radius = 60;
+        self.score = ko.observable(0);
+        self.spawnSpeed = ko.observable(speed);
+        self.growthRate = ko.observable(rate);
+        self.starRadius = ko.observable(radius);
+
+        var width = Math.max(960, innerWidth),
+                height = Math.max(500, innerHeight);
+
+        height = height * 0.8;
+        var i = 0;
+
+        var svg = d3.select("body").insert("svg", "div")
+                .attr("width", width)
+                .attr("height", height);
+
+        var container = svg.append("rect")
+                .attr("width", width)
+                .attr("height", height)
+                .on("ontouchstart" in document ? "touchmove" : "mousemove", tail)
+                .on("click", shot);
+
+
+        var doSpawn = function () {
+                spawnCircle = setInterval(function () {
+                var killed = false;
+                var bomb = svg.append("circle")
+                        .attr("cx", function() {return Math.random() * 10000 % width})
+                        .attr("cy", function() {return Math.random() * 10000 % height})
+                        .attr("r", 1e-6)
+                        .style("fill", "yellow")
+                        .on("click", function() {
+                            console.log(this);
+                            this.remove();
+                            killed = true;
+                            self.score(self.score() + 1);
+                        })
+                        .transition()
+                        .duration(self.growthRate())
+//                        .ease(Math.sqrt)
+                        .attr("r", self.starRadius())
+                        .transition()
+                        .duration(500)
+                        .style("opacity", 1e-6)
+                        .attr("r", 1e-6)
+                        .each("end", function() {
+                            if (!killed) {
+                                self.score(self.score() - 1);
+                            }
+//                            else {
+//                                console.log("here");
+//                                this.style("opacity", 1)
+//                                        .transition()
+//                                        .duration(500)
+//                                        .style("opacity", 1e-6)
+//                                        .attr("r", 100)
+//
+//                            }
+                        })
+                        .remove();
+
+            }, self.spawnSpeed());
+        };
+
+        function tail() {
+            var m = d3.mouse(this);
+
+            svg.insert("circle", "rect")
+                    .attr("cx", m[0])
+                    .attr("cy", m[1])
+                    .attr("r", 1e-6)
+    //                .style("stroke", d3.hsl((i = (i + 1) % 360), 1, .5))
+                    .style("stroke", "green")
+                    .style("stroke-opacity", 1)
+                    .transition()
+                    .duration(300)
+                    .ease(Math.sqrt)
+                    .attr("r", 20)
+                    .style("stroke-opacity", 1e-6)
+                    .remove();
+
+            d3.event.preventDefault();
+        }
+
+        function shot() {
+            var m = d3.mouse(this);
+
+            svg.insert("circle", "rect")
+                    .attr("cx", m[0])
+                    .attr("cy", m[1])
+                    .attr("r", 1e-6)
+                    .style("stroke", "red")
+                    .style("stroke-opacity", 1)
+                    .transition()
+                    .duration(2000)
+                    .ease(Math.sqrt)
+                    .attr("r", 100)
+                    .style("stroke-opacity", 1e-6)
+                    .remove();
+
+            d3.event.preventDefault();
+        }
+
+        function hit() {
+            console.log("oof");
+    //        this.style("fill", "blue");
+        }
+
+        self.spawn = ko.computed(function () {
+            console.log("fook");
+            if (self.spawnSpeed() < 0) {
+                self.spawnSpeed(0);
+            }
+            if (self.growthRate() < 0) {
+                self.growthRate(0)
+            }
+            if (self.starRadius() < 1e-6) {
+                self.starRadius(1e-6);
+            }
+            clearInterval(spawnCircle);
+            doSpawn();
+        });
+
+        self.resetScore = function() {
+            self.score(0);
+        };
+
+        self.resetParameters = function() {
+            self.spawnSpeed(500);
+            self.growthRate(5000);
+            self.starRadius(60);
+        };
+
+
+    }
+
+    ko.applyBindings(new Stats());
+
+</script>
+
+
+</body>
+</html>
